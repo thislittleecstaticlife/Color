@@ -83,9 +83,12 @@ class AppDelegate : NSObject, NSApplicationDelegate {
 
         // • Metal resources and renderer
         //
+        let maximumDrawableCount = 2
+
         guard let device = MTLCreateSystemDefaultDevice(),
               let library = device.makeDefaultLibrary(),
-              let renderer = Renderer(library: library),
+              let composition = Composition(device: device, bufferCount: maximumDrawableCount),
+              let renderer = Renderer(library: library, composition: composition),
               let commandQueue = device.makeCommandQueue() else {
 
             fatalError()
@@ -97,12 +100,13 @@ class AppDelegate : NSObject, NSApplicationDelegate {
         //
         contentView = ContentView( frame: .zero, renderer: renderer,
                                    commandQueue: commandQueue,
-                                   maximumDrawableCount: 2 )
+                                   maximumDrawableCount: maximumDrawableCount )
 
         window.contentView = contentView
 
         NSLayoutConstraint.activate([
-            contentView.widthAnchor.constraint(equalTo: contentView.heightAnchor, multiplier: 1.0)
+            contentView.widthAnchor.constraint(equalToConstant: 540),
+            contentView.heightAnchor.constraint(equalToConstant: 540),
         ])
 
         window.makeKeyAndOrderFront(nil)

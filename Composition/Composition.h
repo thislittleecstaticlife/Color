@@ -1,5 +1,5 @@
 //
-//  Color-Bridging-Header.h
+//  Composition.h
 //
 //  Copyright © 2024 Robert Guequierre
 //
@@ -17,4 +17,27 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#import <Composition/Composition.h>
+#import <Foundation/Foundation.h>
+#import <Metal/Metal.h>
+#import <simd/simd.h>
+
+//===------------------------------------------------------------------------===
+//
+#pragma mark - Composition Declaration
+//
+//===------------------------------------------------------------------------===
+
+@interface Composition : NSObject
+
+// • Initialization
+//
+- (nullable instancetype)initWithDevice:(nonnull id<MTLDevice>)device
+                            bufferCount:(NSInteger)bufferCount;
+
+// • Properties
+//
+@property (nonnull, nonatomic, readonly) id<MTLBuffer> compositionBuffer;
+@property (nonatomic, readonly) NSInteger hueOffset;
+@property (nonatomic, readwrite) float hue;
+
+@end

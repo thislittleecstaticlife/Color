@@ -36,6 +36,7 @@ class Renderer {
     let depthFormat = MTLPixelFormat.depth32Float
     let colorspace  : CGColorSpace
     let device      : MTLDevice
+    let composition : Composition
 
     //===--------------------------------------------------------------------===
     // MARK: • Properties (Private)
@@ -55,9 +56,10 @@ class Renderer {
     //===--------------------------------------------------------------------===
     // MARK: • Initilization
     //
-    init?(library: MTLLibrary) {
+    init?(library: MTLLibrary, composition: Composition) {
 
-        self.device = library.device
+        self.device      = library.device
+        self.composition = composition
 
         // • Color space
         //
@@ -158,14 +160,9 @@ class Renderer {
             return false
         }
 
-        // • Current hue (this will move elsewhere)
+        // • Current composition buffer
         //
-        var hue = Float(42.794290425520614) // 01 Red
-//        var hue = Float(102.52116703710462) // 02 Yellow
-//        var hue = Float(136.26636667129654) // 03 Green
-//        var hue = Float(201.83718573465393) // 04 Cyan
-//        var hue = Float(258.64953857226578) // 05 Blue
-//        var hue = Float(325.26554587953854) // 06 Magenta
+        let compositionBuffer = composition.compositionBuffer
 
         // • Generate Jzazbz volume slice vertices at the current hue
         //
@@ -174,7 +171,7 @@ class Renderer {
         }
 
         computeEncoder.setComputePipelineState(generateVerticesPipelineState)
-        computeEncoder.setBytes(&hue, length: MemoryLayout.size(ofValue: hue), index: 0)
+        computeEncoder.setBuffer(compositionBuffer, offset: composition.hueOffset, index: 0)
         computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
 
         let threadsWidth  = generateVerticesPipelineState.threadExecutionWidth
@@ -193,7 +190,8 @@ class Renderer {
         let renderPassDescriptor = MTLRenderPassDescriptor()
         renderPassDescriptor.colorAttachments[0].texture        = multisampleTexture
         renderPassDescriptor.colorAttachments[0].resolveTexture = outputTexture
-        renderPassDescriptor.colorAttachments[0].loadAction     = .dontCare
+        renderPassDescriptor.colorAttachments[0].clearColor     = MTLClearColorMake(0, 0, 0, 1)
+        renderPassDescriptor.colorAttachments[0].loadAction     = .clear
         renderPassDescriptor.colorAttachments[0].storeAction    = .multisampleResolve
 
         renderPassDescriptor.depthAttachment.texture     = depthTexture
@@ -208,17 +206,17 @@ class Renderer {
         }
 
         renderEncoder.setDepthStencilState(depthState)
+        renderEncoder.setVertexBuffer(compositionBuffer, offset: 0, index: 0)
 
         // • Render the foreground
         //
         renderEncoder.setRenderPipelineState(foregroundPipelineState)
-        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 1)
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: vertexCount)
 
         // -  then the background
         //
         renderEncoder.setRenderPipelineState(backgroundPipelineState)
-        renderEncoder.setVertexBytes(&hue, length: MemoryLayout.size(ofValue: hue), index: 0)
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         renderEncoder.endEncoding()
 

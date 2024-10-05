@@ -1,5 +1,5 @@
 //
-//  Color-Bridging-Header.h
+//  CompositionData.hpp
 //
 //  Copyright © 2024 Robert Guequierre
 //
@@ -17,4 +17,24 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#import <Composition/Composition.h>
+#pragma once
+
+#include <Graphics/Geometry.hpp>
+#include <simd/simd.h>
+
+//===------------------------------------------------------------------------===
+//
+// • CompositionData
+//
+//===------------------------------------------------------------------------===
+
+struct CompositionData
+{
+    simd::uint2         grid_size;
+    geometry::Region    jc_region;
+    float               hue;
+};
+
+#if !defined ( __METAL_VERSION__ )
+static_assert( data::is_trivial_layout<CompositionData>(), "Unexpected layout" );
+#endif

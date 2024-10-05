@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E15CEDBE2CB1AEE9009604A3 /* Composition.mm in Sources */ = {isa = PBXBuildFile; fileRef = E15CEDBD2CB1AEE9009604A3 /* Composition.mm */; };
 		E1C33BF52C90E4BF00F2370E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C33BF42C90E4BF00F2370E /* AppDelegate.swift */; };
 		E1C33BF92C90E4C000F2370E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E1C33BF82C90E4C000F2370E /* Assets.xcassets */; };
 		E1C33C042C90E5CF00F2370E /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C33C032C90E5CF00F2370E /* main.swift */; };
@@ -20,6 +21,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		E15CEDBB2CB1AEA1009604A3 /* CompositionData.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = CompositionData.hpp; sourceTree = "<group>"; };
+		E15CEDBC2CB1AEE9009604A3 /* Composition.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Composition.h; sourceTree = "<group>"; };
+		E15CEDBD2CB1AEE9009604A3 /* Composition.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Composition.mm; sourceTree = "<group>"; };
+		E15CEDC02CB1AFD0009604A3 /* Geometry.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Geometry.hpp; sourceTree = "<group>"; };
+		E15CEDC22CB1B1E9009604A3 /* Layout.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Layout.hpp; sourceTree = "<group>"; };
 		E1C33BF12C90E4BF00F2370E /* Color.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Color.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1C33BF42C90E4BF00F2370E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E1C33BF82C90E4C000F2370E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -47,11 +53,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E15CEDC12CB1B1CF009604A3 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				E15CEDC22CB1B1E9009604A3 /* Layout.hpp */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
 		E1C33BE82C90E4BF00F2370E = {
 			isa = PBXGroup;
 			children = (
 				E1C33C322C933E8400F2370E /* LICENSE */,
 				E1C33C312C933E8400F2370E /* README.md */,
+				E15CEDC12CB1B1CF009604A3 /* Data */,
 				E1C33C292C90EEC600F2370E /* Graphics */,
 				E1C33C052C90E78A00F2370E /* UI */,
 				E1C33C072C90E79F00F2370E /* Utilities */,
@@ -101,6 +116,9 @@
 		E1C33C222C90E95B00F2370E /* Composition */ = {
 			isa = PBXGroup;
 			children = (
+				E15CEDBB2CB1AEA1009604A3 /* CompositionData.hpp */,
+				E15CEDBC2CB1AEE9009604A3 /* Composition.h */,
+				E15CEDBD2CB1AEE9009604A3 /* Composition.mm */,
 				E1C33C232C90E97900F2370E /* Renderer.swift */,
 				E1C33C252C90E9DF00F2370E /* Shaders.metal */,
 			);
@@ -111,6 +129,7 @@
 			isa = PBXGroup;
 			children = (
 				E1FCC7C32C9B784600B6B373 /* Jzazbz.hpp */,
+				E15CEDC02CB1AFD0009604A3 /* Geometry.hpp */,
 			);
 			path = Graphics;
 			sourceTree = "<group>";
@@ -190,6 +209,7 @@
 				E1C33C242C90E97900F2370E /* Renderer.swift in Sources */,
 				E1C33C042C90E5CF00F2370E /* main.swift in Sources */,
 				E1C33C212C90E87400F2370E /* MetalLayerView.swift in Sources */,
+				E15CEDBE2CB1AEE9009604A3 /* Composition.mm in Sources */,
 				E1C33C262C90E9DF00F2370E /* Shaders.metal in Sources */,
 				E1C33BF52C90E4BF00F2370E /* AppDelegate.swift in Sources */,
 				E1C33C0B2C90E85300F2370E /* BitmapDescription.swift in Sources */,

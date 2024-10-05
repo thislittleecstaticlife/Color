@@ -17,6 +17,7 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+#include <Composition/CompositionData.hpp>
 #include <Graphics/Jzazbz.hpp>
 #include <metal_stdlib>
 
@@ -220,15 +221,22 @@ struct VertexOut
     return half4( half3(lrgb), 1.0h );
 }
 
-[[vertex]] VertexOut foreground_vertex(const device float4* vertices [[ buffer(0) ]],
-                                       uint                 vid      [[ vertex_id ]])
+[[vertex]] VertexOut foreground_vertex(constant CompositionData& composition [[ buffer(0) ]],
+                                       const device float4*      vertices    [[ buffer(1) ]],
+                                       uint                      vid         [[ vertex_id ]])
 {
-    const auto v = vertices[vid];
-    const auto y = v.x / 0.16717463103478347f;
-    const auto C = length(v.yz) / 0.17535403f;
+    const     auto v       = vertices[vid];
+    constexpr auto y_max   = 0.16717463103478347f;
+    constexpr auto c_max   = 0.1796875f; // 23/128, slightly more than 100% green
+    constexpr auto dcy     = 0.5f * (c_max - y_max);
+    const     auto y       = (v.x + dcy) / c_max; // slightly above white and below black
+    const     auto C       = length(v.yz) / c_max;
+    const     auto jc_rect = geometry::make_device_rect(composition.jc_region, composition.grid_size);
+    const     auto nx      = mix(jc_rect.left, jc_rect.right, C);
+    const     auto ny      = mix(jc_rect.bottom, jc_rect.top, y);
 
     return {
-        .position = float4{ C*2.0f - 1.0f, y*2.0f - 1.0f, 0.5f, 1.0f },
+        .position = float4{ nx, ny, 0.5f, 1.0f },
         .color    = v
     };
 }
@@ -239,9 +247,10 @@ struct VertexOut
 
 [[fragment]] half4 background_fragment(VertexOut input [[ stage_in ]])
 {
-    // • input.color[3] is unit y position. At (1, 0) in unit coordinates chroma is 0.024;
-    //  at (1, 1), 0.058. At unit x = 0 for all y values, chroma is cmin,
-    //  so C = cmin + (mix(0.024, 0.058, yu) - cmin) * xu,
+    // • input.color[3] is unit y position. At (1, 0) in unit coordinates chroma
+    //  is 0.024; at (1, 1) it's 0.058. At unit x = 0 for all y values, chroma
+    //  is Cmin, so C = Cmin + (mix(0.024, 0.058, yu) - Cmin) * xu. This is
+    //  nothing more than a stylistic decision
     constexpr auto Cmin = 0.024f/3.0f;
 
     const auto Cd = mix(0.024f, 0.058f, input.color[3]) - Cmin;
@@ -254,8 +263,8 @@ struct VertexOut
     return half4( half3(lrgb), 1.0h );
 }
 
-[[vertex]] VertexOut background_vertex(constant float& hue [[ buffer(0) ]],
-                                       uint            vid [[ vertex_id ]])
+[[vertex]] VertexOut background_vertex(constant CompositionData& composition [[ buffer(0) ]],
+                                       uint                      vid         [[ vertex_id ]])
 {
     // • Clockwise quad triangle strip
     //
@@ -265,11 +274,12 @@ struct VertexOut
     //
     const auto is_left = 0 != (vid & 0b10);
     const auto is_top  = 0 != (vid & 0b01);
+    const auto jc_rect = geometry::make_device_rect(composition.jc_region, composition.grid_size);
 
     // • Normalized x and y coordinates
     //
-    const auto xn = is_left ? -1.0f :  1.0f;
-    const auto yn = is_top  ?  1.0f : -1.0f;
+    const auto xn = is_left ? jc_rect.left : jc_rect.right;
+    const auto yn = is_top  ? jc_rect.top  : jc_rect.bottom;
 
     // • Unit [0, 1]
     //
@@ -278,7 +288,8 @@ struct VertexOut
 
     // • Color from coordinates
     //
-    const auto Jz  = mix(0.032608401221558024f, 0.12133886641726202f, yu);
+    const auto hue = composition.hue;
+    const auto Jz  = is_top ? 0.12133886641726202f : 0.032608401221558024f;
     const auto caz = cospi(hue / 180.0f) * xu; // az chroma scale
     const auto cbz = sinpi(hue / 180.0f) * xu; // bz chroma scale
 
