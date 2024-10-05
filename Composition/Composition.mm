@@ -20,6 +20,8 @@
 #import "Composition.h"
 #import "CompositionData.hpp"
 
+#import <Graphics/Jzazbz.hpp>
+
 #import <numeric>
 
 //===------------------------------------------------------------------------===
@@ -70,15 +72,21 @@
         auto composition = [self currentComposition];
 
         *composition = {
-            .grid_size = { 30, 30 },
-            .jc_region = { .left = 1, .top = 1, .right = 29, .bottom = 29 },
+            .grid_size       = { 30, 33 },
+            .jc_region       = { .left =  1, .top =  1, .right = 29, .bottom = 29 },
+            .gradient_region = { .left =  1, .top = 30, .right = 26, .bottom = 32 },
+            .max_c_region    = { .left = 27, .top = 30, .right = 29, .bottom = 32 },
+
             .hue = 42.794290425520614f, // 01 Red
 //            .hue = 102.52116703710462f, // 02 Yellow
 //            .hue = 136.26636667129654f, // 03 Green
 //            .hue = 201.83718573465393f, // 04 Cyan
 //            .hue = 258.64953857226578f, // 05 Blue
 //            .hue = 325.26554587953854f, // 06 Magenta
+            0
         };
+
+        composition->max_c_color = jzazbz::find_max_chroma_color(composition->hue);
     }
 
     return self;
@@ -98,7 +106,8 @@
 
         auto updateComposition = [self nextComposition];
 
-        updateComposition->hue = normalizedHue;
+        updateComposition->hue         = normalizedHue;
+        updateComposition->max_c_color = jzazbz::find_max_chroma_color(normalizedHue);
     }
 }
 

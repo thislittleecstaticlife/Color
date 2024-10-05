@@ -88,8 +88,9 @@ class AppDelegate : NSObject, NSApplicationDelegate {
         guard let device = MTLCreateSystemDefaultDevice(),
               let library = device.makeDefaultLibrary(),
               let composition = Composition(device: device, bufferCount: maximumDrawableCount),
-              let renderer = Renderer(library: library, composition: composition),
-              let commandQueue = device.makeCommandQueue() else {
+              let commandQueue = device.makeCommandQueue(),
+              let renderer = Renderer(library: library, composition: composition,
+                                      commandQueue: commandQueue) else {
 
             fatalError()
         }
@@ -106,7 +107,7 @@ class AppDelegate : NSObject, NSApplicationDelegate {
 
         NSLayoutConstraint.activate([
             contentView.widthAnchor.constraint(equalToConstant: 540),
-            contentView.heightAnchor.constraint(equalToConstant: 540),
+            contentView.heightAnchor.constraint(equalToConstant: 598),
         ])
 
         window.makeKeyAndOrderFront(nil)
@@ -142,7 +143,7 @@ class AppDelegate : NSObject, NSApplicationDelegate {
         textureDescriptor.textureType = .type2D
         textureDescriptor.pixelFormat = renderer.pixelFormat
         textureDescriptor.width       = 1080
-        textureDescriptor.height      = 1080
+        textureDescriptor.height      = 1188
         textureDescriptor.usage       = .renderTarget
 
         guard let texture = renderer.device.makeTexture(descriptor: textureDescriptor),

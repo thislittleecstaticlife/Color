@@ -45,6 +45,9 @@ class Renderer {
     private let vertexBuffer                  : MTLBuffer
     private let foregroundPipelineState       : MTLRenderPipelineState
     private let backgroundPipelineState       : MTLRenderPipelineState
+    private let maxCPipelineState             : MTLRenderPipelineState
+    private let hueGradientPipelineState      : MTLRenderPipelineState
+    private let hueGradientTexture            : MTLTexture
     private let depthState                    : MTLDepthStencilState
     private var textures                      : (multisample: MTLTexture, depth: MTLTexture)?
 
@@ -56,7 +59,7 @@ class Renderer {
     //===--------------------------------------------------------------------===
     // MARK: • Initilization
     //
-    init?(library: MTLLibrary, composition: Composition) {
+    init?(library: MTLLibrary, composition: Composition, commandQueue: MTLCommandQueue) {
 
         self.device      = library.device
         self.composition = composition
@@ -126,6 +129,64 @@ class Renderer {
             return nil
         }
 
+        // • Max chroma color pipeline
+        //
+        guard let maxCVertex = library.makeFunction(name: "max_c_vertex"),
+              let passThroughFragment = library.makeFunction(name: "pass_through_fragment") else {
+
+            return nil
+        }
+
+        let maxCPipelineDescriptor = MTLRenderPipelineDescriptor()
+        maxCPipelineDescriptor.colorAttachments[0].pixelFormat = self.pixelFormat
+        maxCPipelineDescriptor.depthAttachmentPixelFormat      = self.depthFormat
+        maxCPipelineDescriptor.vertexFunction                  = maxCVertex
+        maxCPipelineDescriptor.fragmentFunction                = passThroughFragment
+        maxCPipelineDescriptor.rasterSampleCount               = 4
+
+        guard let maxCPipelineState =
+                try? device.makeRenderPipelineState(descriptor: maxCPipelineDescriptor) else {
+
+            return nil
+        }
+
+        // • Hue gradient pipeline
+        //
+        guard let hueGradientVertex = library.makeFunction(name: "hue_gradient_vertex"),
+              let hueGradientFragment = library.makeFunction(name: "hue_gradient_fragment") else {
+
+            return nil
+        }
+
+        let hueGradientPipelineDescriptor = MTLRenderPipelineDescriptor()
+        hueGradientPipelineDescriptor.colorAttachments[0].pixelFormat = self.pixelFormat
+        hueGradientPipelineDescriptor.depthAttachmentPixelFormat      = self.depthFormat
+        hueGradientPipelineDescriptor.vertexFunction                  = hueGradientVertex
+        hueGradientPipelineDescriptor.fragmentFunction                = hueGradientFragment
+        hueGradientPipelineDescriptor.rasterSampleCount               = 4
+
+        guard let hueGradientPipelineState =
+                try? device.makeRenderPipelineState(descriptor: hueGradientPipelineDescriptor) else {
+
+            return nil
+        }
+
+        // • Hue gradient texture
+        //
+        let hueGradientTextureDescriptor = MTLTextureDescriptor()
+        hueGradientTextureDescriptor.pixelFormat = self.pixelFormat
+        hueGradientTextureDescriptor.textureType = .type1D
+        hueGradientTextureDescriptor.width       = 1024
+        hueGradientTextureDescriptor.height      = 1
+        hueGradientTextureDescriptor.sampleCount = 1
+        hueGradientTextureDescriptor.usage       = [.shaderRead, .shaderWrite]
+
+        guard let hueGradientTexture =
+                device.makeTexture(descriptor: hueGradientTextureDescriptor) else {
+
+            return nil
+        }
+
         // • Depth/stencil state
         //
         let depthStencilDescriptor = MTLDepthStencilDescriptor()
@@ -145,7 +206,16 @@ class Renderer {
         self.vertexBuffer                  = vertexBuffer
         self.foregroundPipelineState       = foregroundPipelineState
         self.backgroundPipelineState       = backgroundPipelineState
+        self.maxCPipelineState             = maxCPipelineState
+        self.hueGradientPipelineState      = hueGradientPipelineState
+        self.hueGradientTexture            = hueGradientTexture
         self.depthState                    = depthState
+
+        // • Create one-time GPU-rendered resources
+        //
+        guard initializeResources(with: library, commandQueue: commandQueue) else {
+            return nil
+        }
     }
 
     //===--------------------------------------------------------------------===
@@ -171,7 +241,7 @@ class Renderer {
         }
 
         computeEncoder.setComputePipelineState(generateVerticesPipelineState)
-        computeEncoder.setBuffer(compositionBuffer, offset: composition.hueOffset, index: 0)
+        computeEncoder.setBuffer(compositionBuffer, offset: 0, index: 0)
         computeEncoder.setBuffer(vertexBuffer, offset: 0, index: 1)
 
         let threadsWidth  = generateVerticesPipelineState.threadExecutionWidth
@@ -218,6 +288,20 @@ class Renderer {
         //
         renderEncoder.setRenderPipelineState(backgroundPipelineState)
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+
+        // • Hue gradient
+        //
+        renderEncoder.setRenderPipelineState(hueGradientPipelineState)
+        renderEncoder.setFragmentTexture(hueGradientTexture, index: 0)
+        renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+
+        // • Max chroma color indicator
+        //
+        renderEncoder.setRenderPipelineState(maxCPipelineState)
+        renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+
+        // • Done
+        //
         renderEncoder.endEncoding()
 
         return true
@@ -226,6 +310,36 @@ class Renderer {
     //===--------------------------------------------------------------------===
     // MARK: • Private Methods
     //
+    private func initializeResources(with library: MTLLibrary, commandQueue: MTLCommandQueue) -> Bool {
+
+        // • Generate hue gradient texture
+        //
+        guard let generateHueGradient = library.makeFunction(name: "generate_hue_gradient"),
+              let generateHueGradientPipeline =
+                try? device.makeComputePipelineState(function: generateHueGradient),
+              let commandBuffer = commandQueue.makeCommandBuffer(),
+              let computeEncoder = commandBuffer.makeComputeCommandEncoder() else {
+
+            return false
+        }
+
+        computeEncoder.setComputePipelineState(generateHueGradientPipeline)
+        computeEncoder.setTexture(hueGradientTexture, index: 0)
+
+        let threadsWidth  = generateHueGradientPipeline.threadExecutionWidth
+        let threadsHeight = generateHueGradientPipeline.maxTotalThreadsPerThreadgroup / threadsWidth
+
+        let threadsPerThreadGroup = MTLSize(width: threadsWidth, height: threadsHeight, depth: 1)
+        let threads = MTLSize(width: threadsWidth, height: hueGradientTexture.width, depth: 1)
+
+        computeEncoder.dispatchThreads(threads, threadsPerThreadgroup: threadsPerThreadGroup)
+        computeEncoder.endEncoding()
+
+        commandBuffer.commit()
+
+        return true
+    }
+
     private func intermediateTextures(for outputTexture: MTLTexture) -> (MTLTexture, MTLTexture)? {
 
         if let textures,

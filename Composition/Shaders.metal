@@ -33,7 +33,9 @@ namespace
     {
         // • Find the Display P3 max chroma edge for the given hue
         //
-        const auto edges = jzazbz::find_max_chroma_edge_P3(hue);
+        const auto target_hue     = (hue < 180.0f) ? hue : hue - 360.0f;
+        const auto target_radians = target_hue * M_PI_F / 180.0f;
+        const auto edges          = jzazbz::find_max_chroma_edge_P3(target_hue);
 
         // • Perform binary search along edge to find the target hue
         //
@@ -46,7 +48,7 @@ namespace
             const auto jab      = jzazbz::from_LMS(val.xyz);
             const auto test_hue = atan2(jab[2], jab[1]);
 
-            const auto test      = (test_hue <= hue) ? lane_t : -1.0;
+            const auto test      = (test_hue <= target_radians) ? lane_t : -1.0;
             const auto low_t     = max(0.0f, simd_max(test));
             const auto new_lower = mix(lower, upper, low_t);
             const auto new_upper = mix(lower, upper, low_t + 1.0f/height);
@@ -74,7 +76,7 @@ namespace
     const auto height    = static_cast<float>(grid_size.x);
     const auto lane_t    = static_cast<float>(gid.x) / height;
     const auto hue_t     = (static_cast<float>(gid.y) + 0.5f) / static_cast<float>(grid_size.y);
-    const auto hue       = mix(-M_PI_F, M_PI_F, hue_t);
+    const auto hue       = mix(-180.0f, 180.0f, hue_t);
     const auto max_c_jab = find_max_chroma_color(lane_t, height, hue);
 
     if (0 == gid.x)
@@ -107,46 +109,51 @@ struct HueGradientVertex
     return texture.sample(s, in.tex_coord);
 }
 
-/*
-[[vertex]] HueGradientVertex hue_gradient_vertex(constant State& state [[ buffer(0) ]],
-                                                 unsigned int    vid   [[ vertex_id ]])
+[[vertex]] HueGradientVertex hue_gradient_vertex(constant CompositionData& composition [[ buffer(0) ]],
+                                                 ushort                    vid         [[ vertex_id ]])
 {
-    // Uniform position
-    const auto xu = (0 == (vid & 0x02)) ? 0.0f : 1.0f;
+    // • Clockwise quad triangle strip
+    //
+    //  1   3
+    //  | \ |
+    //  0   2
+    //
+    const auto gradient_rect = geometry::make_device_rect(composition.gradient_region, composition.grid_size);
+    const auto is_left       = 0 != (vid & 0b10);
+    const auto is_top        = 0 != (vid & 0b01);
 
-    // Device position in lower right
-    const auto xd = (0 == (vid & 0x02)) ? state.hue_gradient_rect.left   : state.hue_gradient_rect.right;
-    const auto yd = (0 == (vid & 0x01)) ? state.hue_gradient_rect.bottom : state.hue_gradient_rect.top;
+    // • Uniform position
+    //
+    const auto xu = is_left ? 0.0f : 1.0f;
 
-    // Normalized position
-    const auto xn = fma(xd, 2.0f/state.view_size.x, -1.0f);
-    const auto yn = fma(yd, 2.0f/state.view_size.y, -1.0f);
+    // • Device position
+    //
+    const auto xn = is_left ? gradient_rect.left : gradient_rect.right;
+    const auto yn = is_top  ? gradient_rect.top  : gradient_rect.bottom;
 
     return {
         .position  = float4{ xn, yn, 0.7f, 1.0f },
-        .tex_coord = fma( fmod(state.hue, 360.0f), 1.0f/360.0f, xu - 0.5f )
+        .tex_coord = fma( fmod(composition.hue, 360.0f), 1.0f/360.0f, xu - 0.5f )
     };
 }
-*/
 
 //===------------------------------------------------------------------------===
 // • Generate_vertices
 //===------------------------------------------------------------------------===
 
-[[kernel]] void generate_vertices(constant float& hue       [[ buffer(0)               ]],
-                                  device float4*  output    [[ buffer(1)               ]],
-                                  ushort2         gid       [[ thread_position_in_grid ]],
-                                  ushort2         grid_size [[ threads_per_grid        ]])
+[[kernel]] void generate_vertices(constant CompositionData& composition [[ buffer(0)               ]],
+                                  device float4*            output      [[ buffer(1)               ]],
+                                  ushort2                   gid         [[ thread_position_in_grid ]],
+                                  ushort2                   grid_size   [[ threads_per_grid        ]])
 {
     // • gid.x is simd_lane_id and grid_size.x is threads_per_simdgroup (= thread_execution_width)
 
     // • Find the Jzazbz value with the highest chroma at `hue` - each simd group performs the
     //   same search instead of using a shared computation (for now)
     //
-    const auto height     = static_cast<float>(grid_size.x);
-    const auto lane_t     = static_cast<float>(gid.x) / height;
-    const auto target_hue = (hue < 180.0f ? hue : hue - 360.0f) * M_PI_F / 180.f;
-    const auto max_c_jab  = find_max_chroma_color(lane_t, height, target_hue);
+    const auto height    = static_cast<float>(grid_size.x);
+    const auto lane_t    = static_cast<float>(gid.x) / height;
+    const auto max_c_jab = composition.max_c_color;
 
     // • Find the top and bottom intersections with the in-gamut Jzazbz solid at the current hue
     //
@@ -272,9 +279,9 @@ struct VertexOut
     //  | \ |
     //  0   2
     //
+    const auto jc_rect = geometry::make_device_rect(composition.jc_region, composition.grid_size);
     const auto is_left = 0 != (vid & 0b10);
     const auto is_top  = 0 != (vid & 0b01);
-    const auto jc_rect = geometry::make_device_rect(composition.jc_region, composition.grid_size);
 
     // • Normalized x and y coordinates
     //
@@ -296,5 +303,42 @@ struct VertexOut
     return {
         .position = float4( xn, yn, 0.75f, 1.0f ),
         .color    = float4{ Jz, caz, cbz, yu }
+    };
+}
+
+//===------------------------------------------------------------------------===
+// • max-chroma color display
+//===------------------------------------------------------------------------===
+
+[[fragment]] half4 pass_through_fragment(VertexOut in [[ stage_in ]])
+{
+    return half4(in.color);
+}
+
+[[vertex]] VertexOut max_c_vertex(constant CompositionData& composition [[ buffer(0) ]],
+                                  ushort                    vid         [[ vertex_id ]])
+{
+    // • Clockwise quad triangle strip
+    //
+    //  1   3
+    //  | \ |
+    //  0   2
+    //
+    const auto max_c_rect = geometry::make_device_rect(composition.max_c_region, composition.grid_size);
+    const auto is_left    = 0 != (vid & 0b10);
+    const auto is_top     = 0 != (vid & 0b01);
+
+    // • Normalized x and y coordinates
+    //
+    const auto xn = is_left ? max_c_rect.left : max_c_rect.right;
+    const auto yn = is_top  ? max_c_rect.top  : max_c_rect.bottom;
+
+    // • Color
+    //
+    const auto lrgb = jzazbz::convert_to_linear_display_P3(composition.max_c_color);
+
+    return {
+        .position = float4( xn, yn, 0.75f, 1.0f ),
+        .color    = float4( lrgb, 1.0f )
     };
 }

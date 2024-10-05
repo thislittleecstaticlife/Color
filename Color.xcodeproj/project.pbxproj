@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		E15CEDBE2CB1AEE9009604A3 /* Composition.mm in Sources */ = {isa = PBXBuildFile; fileRef = E15CEDBD2CB1AEE9009604A3 /* Composition.mm */; };
+		E15CEDC42CB1C46F009604A3 /* Jzazbz.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E15CEDC32CB1C39E009604A3 /* Jzazbz.cpp */; };
 		E1C33BF52C90E4BF00F2370E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C33BF42C90E4BF00F2370E /* AppDelegate.swift */; };
 		E1C33BF92C90E4C000F2370E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E1C33BF82C90E4C000F2370E /* Assets.xcassets */; };
 		E1C33C042C90E5CF00F2370E /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C33C032C90E5CF00F2370E /* main.swift */; };
@@ -26,6 +27,7 @@
 		E15CEDBD2CB1AEE9009604A3 /* Composition.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Composition.mm; sourceTree = "<group>"; };
 		E15CEDC02CB1AFD0009604A3 /* Geometry.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Geometry.hpp; sourceTree = "<group>"; };
 		E15CEDC22CB1B1E9009604A3 /* Layout.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Layout.hpp; sourceTree = "<group>"; };
+		E15CEDC32CB1C39E009604A3 /* Jzazbz.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Jzazbz.cpp; sourceTree = "<group>"; };
 		E1C33BF12C90E4BF00F2370E /* Color.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Color.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1C33BF42C90E4BF00F2370E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E1C33BF82C90E4C000F2370E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -129,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				E1FCC7C32C9B784600B6B373 /* Jzazbz.hpp */,
+				E15CEDC32CB1C39E009604A3 /* Jzazbz.cpp */,
 				E15CEDC02CB1AFD0009604A3 /* Geometry.hpp */,
 			);
 			path = Graphics;
@@ -205,6 +208,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E15CEDC42CB1C46F009604A3 /* Jzazbz.cpp in Sources */,
 				E1C33C272C90EB1E00F2370E /* ContentView.swift in Sources */,
 				E1C33C242C90E97900F2370E /* Renderer.swift in Sources */,
 				E1C33C042C90E5CF00F2370E /* main.swift in Sources */,

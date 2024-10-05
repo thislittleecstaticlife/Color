@@ -32,7 +32,11 @@ struct CompositionData
 {
     simd::uint2         grid_size;
     geometry::Region    jc_region;
+    geometry::Region    gradient_region;
+    geometry::Region    max_c_region;
+
     float               hue;
+    simd::float3        max_c_color;
 };
 
 #if !defined ( __METAL_VERSION__ )
