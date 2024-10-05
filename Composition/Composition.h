@@ -36,8 +36,11 @@
 
 // • Properties
 //
-@property (nonnull, nonatomic, readonly) id<MTLBuffer> compositionBuffer;
-@property (nonatomic, readonly) NSInteger hueOffset;
 @property (nonatomic, readwrite) float hue;
+
+// • Methods
+//
+- (nonnull id<MTLBuffer>)prepareCompositionBuffer;
+- (CGRect)hueDialFrameInViewOfSize:(CGSize)viewSize NS_SWIFT_NAME(hueDialFrame(in:));
 
 @end

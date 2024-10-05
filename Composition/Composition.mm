@@ -34,6 +34,7 @@
 {
     NSArray<id<MTLBuffer>> *compositionBuffers;
     NSInteger               compositionBufferIndex;
+    float                   nextHue;
 }
 
 //===------------------------------------------------------------------------===
@@ -71,22 +72,27 @@
         //
         auto composition = [self currentComposition];
 
+        nextHue = 42.794290425520614f; // 01 Red
+        // nextHue = 102.52116703710462f; // 02 Yellow
+        // nextHue = 136.26636667129654f; // 03 Green
+        // nextHue = 201.83718573465393f; // 04 Cyan
+        // nextHue = 258.64953857226578f; // 05 Blue
+        // nextHue = 325.26554587953854f; // 06 Magenta
+
         *composition = {
             .grid_size       = { 30, 33 },
             .jc_region       = { .left =  1, .top =  1, .right = 29, .bottom = 29 },
             .gradient_region = { .left =  1, .top = 30, .right = 26, .bottom = 32 },
             .max_c_region    = { .left = 27, .top = 30, .right = 29, .bottom = 32 },
-
-            .hue = 42.794290425520614f, // 01 Red
-//            .hue = 102.52116703710462f, // 02 Yellow
-//            .hue = 136.26636667129654f, // 03 Green
-//            .hue = 201.83718573465393f, // 04 Cyan
-//            .hue = 258.64953857226578f, // 05 Blue
-//            .hue = 325.26554587953854f, // 06 Magenta
-            0
+            .hue             = nextHue,
+            .max_c_color     = jzazbz::find_max_chroma_color(nextHue)
         };
 
-        composition->max_c_color = jzazbz::find_max_chroma_color(composition->hue);
+        for (NSInteger ib = 1; ib < compositionBuffers.count; ++ib) {
+
+            memcpy( compositionBuffers[ib].contents, compositionBuffers[0].contents,
+                   compositionBufferLength );
+        }
     }
 
     return self;
@@ -98,52 +104,57 @@
 
 - (void)setHue:(float)newHue {
 
-    const auto reducedHue    = fmodf(newHue, 360.0f);
-    const auto normalizedHue = (reducedHue < 0.0f) ? reducedHue + 360.0f : reducedHue;
-    const auto composition   = [self currentComposition];
+    const auto reducedHue = fmodf(newHue, 360.0f);
 
-    if (composition->hue != normalizedHue) {
-
-        auto updateComposition = [self nextComposition];
-
-        updateComposition->hue         = normalizedHue;
-        updateComposition->max_c_color = jzazbz::find_max_chroma_color(normalizedHue);
-    }
+    nextHue = (reducedHue < 0.0f) ? reducedHue + 360.0f : reducedHue;
 }
 
 - (float)hue {
 
-    return [self currentComposition]->hue;
+    return nextHue;
 }
 
 //===------------------------------------------------------------------------===
 #pragma mark - Properties (Private)
 //===------------------------------------------------------------------------===
 
-- (CompositionData*)currentComposition {
+- (nonnull CompositionData*)currentComposition {
 
     return static_cast<CompositionData*>(compositionBuffers[compositionBufferIndex].contents);
 }
 
-- (CompositionData*)nextComposition {
-
-    compositionBufferIndex = (compositionBufferIndex + 1) % compositionBuffers.count;
-
-    return [self currentComposition];
-}
-
 //===------------------------------------------------------------------------===
-#pragma mark - Properties
+#pragma mark - Methods
 //===------------------------------------------------------------------------===
 
-- (nonnull id<MTLBuffer>)compositionBuffer {
+- (nonnull id<MTLBuffer>)prepareCompositionBuffer {
+
+    auto composition = [self currentComposition];
+
+    if (composition->hue != nextHue) {
+
+        compositionBufferIndex = (compositionBufferIndex + 1) % compositionBuffers.count;
+        composition            = [self currentComposition];
+
+        composition->hue         = nextHue;
+        composition->max_c_color = jzazbz::find_max_chroma_color(nextHue);
+    }
 
     return compositionBuffers[compositionBufferIndex];
 }
 
-- (NSInteger)hueOffset {
+- (CGRect)hueDialFrameInViewOfSize:(CGSize)viewSize {
 
-    return offsetof(CompositionData, hue);
+    const auto composition = [self currentComposition];
+
+    const auto left   = (composition->gradient_region.left   * viewSize.width)  / composition->grid_size.x;
+    const auto right  = (composition->gradient_region.right  * viewSize.width)  / composition->grid_size.x;
+    const auto top    = (composition->gradient_region.top    * viewSize.height) / composition->grid_size.y;
+    const auto bottom = (composition->gradient_region.bottom * viewSize.height) / composition->grid_size.y;
+
+    // • NSView bottom-up rect
+    //
+    return CGRectMake(left, viewSize.height - bottom, right - left, bottom - top);
 }
 
 @end

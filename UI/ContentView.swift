@@ -29,9 +29,13 @@ import Metal
 class ContentView : MetalLayerView {
 
     //===--------------------------------------------------------------------===
+    // MARK: • Properties
+    //
+    let renderer : Renderer
+
+    //===--------------------------------------------------------------------===
     // MARK: • Properties (Private)
     //
-    private let renderer     : Renderer
     private let commandQueue : MTLCommandQueue
     private var semaphore    : DispatchSemaphore
 

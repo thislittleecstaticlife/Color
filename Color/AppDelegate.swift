@@ -97,11 +97,11 @@ class AppDelegate : NSObject, NSApplicationDelegate {
 
         self.renderer = renderer
 
-        // • Content view
+        // • Composition view
         //
-        contentView = ContentView( frame: .zero, renderer: renderer,
-                                   commandQueue: commandQueue,
-                                   maximumDrawableCount: maximumDrawableCount )
+        contentView = CompositionView( frame: .zero, renderer: renderer,
+                                       commandQueue: commandQueue,
+                                       maximumDrawableCount: maximumDrawableCount )
 
         window.contentView = contentView
 

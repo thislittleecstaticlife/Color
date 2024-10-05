@@ -232,7 +232,7 @@ class Renderer {
 
         // • Current composition buffer
         //
-        let compositionBuffer = composition.compositionBuffer
+        let compositionBuffer = composition.prepareBuffer()
 
         // • Generate Jzazbz volume slice vertices at the current hue
         //
